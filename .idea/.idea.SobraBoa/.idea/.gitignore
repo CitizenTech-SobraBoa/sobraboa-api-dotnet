@@ -1,0 +1,49 @@
+﻿# ---------- Rider / JetBrains ----------
+.idea/
+/shelf/
+/workspace.xml
+/contentModel.xml
+/modules.xml
+/.idea.SobraBoa.iml
+/projectSettingsUpdater.xml
+/httpRequests/
+/queries/
+/dataSources/
+/dataSources.local.xml
+
+# ---------- Visual Studio / VS Code ----------
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# ---------- Build .NET ----------
+bin/
+obj/
+publish/
+artifacts/
+*.nupkg
+
+# ---------- Testes e cobertura ----------
+TestResults/
+coverage/
+*.trx
+*.coverage
+
+# ---------- Logs (Serilog grava em logs/) ----------
+logs/
+*.log
+
+# ---------- Segredos e configuração local (NUNCA commitar) ----------
+.env
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.pfx
+*.key
+
+# ---------- Sistema operacional ----------
+.DS_Store
+Thumbs.db
