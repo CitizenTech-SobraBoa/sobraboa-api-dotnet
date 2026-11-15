@@ -1,0 +1,27 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:slim
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      APP_USER: sobraboa
+      APP_USER_PASSWORD: ${ORACLE_APP_PASSWORD}
+    ports: ["1521:1521"]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: src/SobraBoa.API/Dockerfile
+    depends_on:
+      oracle:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__OracleConnection: "User Id=sobraboa;Password=${ORACLE_APP_PASSWORD};Data Source=oracle:1521/FREEPDB1"
+      Jwt__Key: ${JWT_KEY}
+      Admin__Email: admin@sobraboa.com
+      Admin__Senha: ${ADMIN_SENHA}
+      ASPNETCORE_ENVIRONMENT: Development
+    ports: ["5080:8080"]
