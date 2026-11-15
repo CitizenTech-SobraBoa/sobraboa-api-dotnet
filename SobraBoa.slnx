@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SobraBoa.API/SobraBoa.API.csproj" />
+    <Project Path="src/SobraBoa.Application/SobraBoa.Application.csproj" />
+    <Project Path="src/SobraBoa.Domain/SobraBoa.Domain.csproj" />
+    <Project Path="src/SobraBoa.Infrastructure/SobraBoa.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SobraBoa.Application.Tests/SobraBoa.Application.Tests.csproj" />
+    <Project Path="tests/SobraBoa.Domain.Tests/SobraBoa.Domain.Tests.csproj" />
+    <Project Path="tests/SobraBoa.IntegrationTests/SobraBoa.IntegrationTests.csproj" />
+  </Folder>
+</Solution>
