@@ -1,0 +1,39 @@
+# Rider / JetBrains
+.idea/
+*.DotSettings.user
+/shelf/
+/workspace.xml
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build .NET
+bin/
+obj/
+publish/
+*.nupkg
+
+# Testes e cobertura
+TestResults/
+coverage/
+*.trx
+
+# Logs
+logs/
+*.log
+
+# Segredos e configuração local (NUNCA commitar)
+.env
+!.env.example
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.pfx
+*.key
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
