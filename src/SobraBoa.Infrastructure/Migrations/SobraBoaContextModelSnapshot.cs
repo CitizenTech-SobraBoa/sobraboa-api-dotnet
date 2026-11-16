@@ -90,8 +90,8 @@ namespace SobraBoa.Infrastructure.Migrations
                     b.Property<double>("Longitude")
                         .HasColumnType("BINARY_DOUBLE");
 
-                    b.Property<bool>("RequerRefrigeracao")
-                        .HasColumnType("BOOLEAN");
+                    b.Property<int>("RequerRefrigeracao")
+                        .HasColumnType("NUMBER(1)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -308,8 +308,8 @@ namespace SobraBoa.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("NVARCHAR2(20)");
 
-                    b.Property<bool>("PossuiRefrigeracao")
-                        .HasColumnType("BOOLEAN");
+                    b.Property<int>("PossuiRefrigeracao")
+                        .HasColumnType("NUMBER(1)");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()

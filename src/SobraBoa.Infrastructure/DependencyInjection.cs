@@ -13,8 +13,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection s, IConfiguration cfg)
     {
-        s.AddDbContext<SobraBoaContext>(o => o.UseOracle(cfg.GetConnectionString("OracleConnection")));
-        s.AddScoped<IUnitOfWork, UnitOfWork>();
+        s.AddDbContext<SobraBoaContext>(o => o.UseOracle(
+            cfg.GetConnectionString("OracleConnection"),
+            x => x.MigrationsHistoryTable("__SobraBoaMigrationsHistory")));        s.AddScoped<IUnitOfWork, UnitOfWork>();
         s.AddScoped<IUsuarioRepository, UsuarioRepository>();
         s.AddScoped<IDoacaoRepository, DoacaoRepository>();
         s.AddScoped<IReservaRepository, ReservaRepository>();

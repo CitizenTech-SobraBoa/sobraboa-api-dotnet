@@ -79,7 +79,7 @@ namespace SobraBoa.Infrastructure.Migrations
                     Cep = table.Column<string>(type: "NVARCHAR2(2000)", nullable: true),
                     Latitude = table.Column<double>(type: "BINARY_DOUBLE", nullable: false),
                     Longitude = table.Column<double>(type: "BINARY_DOUBLE", nullable: false),
-                    PossuiRefrigeracao = table.Column<bool>(type: "BOOLEAN", nullable: false)
+                    PossuiRefrigeracao = table.Column<int>(type: "NUMBER(1)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -97,7 +97,7 @@ namespace SobraBoa.Infrastructure.Migrations
                     Descricao = table.Column<string>(type: "NVARCHAR2(2000)", nullable: true),
                     JanelaInicio = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
                     JanelaFim = table.Column<DateTime>(type: "TIMESTAMP(7)", nullable: false),
-                    RequerRefrigeracao = table.Column<bool>(type: "BOOLEAN", nullable: false),
+                    RequerRefrigeracao = table.Column<int>(type: "NUMBER(1)", nullable: false),
                     InstrucoesRetirada = table.Column<string>(type: "NVARCHAR2(2000)", nullable: true),
                     Latitude = table.Column<double>(type: "BINARY_DOUBLE", nullable: false),
                     Longitude = table.Column<double>(type: "BINARY_DOUBLE", nullable: false),
@@ -223,6 +223,7 @@ namespace SobraBoa.Infrastructure.Migrations
                 table: "SB_USUARIOS",
                 column: "Email",
                 unique: true);
+            
             migrationBuilder.Sql(@"
   CREATE UNIQUE INDEX UQ_RESERVA_EM_ANDAMENTO
   ON SB_RESERVAS (CASE WHEN ""Status"" IN ('Ativa','Retirada') THEN ""DoacaoId"" END)");

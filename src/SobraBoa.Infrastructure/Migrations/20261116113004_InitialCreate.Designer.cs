@@ -12,7 +12,7 @@ using SobraBoa.Infrastructure.Persistence;
 namespace SobraBoa.Infrastructure.Migrations
 {
     [DbContext(typeof(SobraBoaContext))]
-    [Migration("20261115140556_InitialCreate")]
+    [Migration("20261116113004_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -93,8 +93,8 @@ namespace SobraBoa.Infrastructure.Migrations
                     b.Property<double>("Longitude")
                         .HasColumnType("BINARY_DOUBLE");
 
-                    b.Property<bool>("RequerRefrigeracao")
-                        .HasColumnType("BOOLEAN");
+                    b.Property<int>("RequerRefrigeracao")
+                        .HasColumnType("NUMBER(1)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -311,8 +311,8 @@ namespace SobraBoa.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("NVARCHAR2(20)");
 
-                    b.Property<bool>("PossuiRefrigeracao")
-                        .HasColumnType("BOOLEAN");
+                    b.Property<int>("PossuiRefrigeracao")
+                        .HasColumnType("NUMBER(1)");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()
