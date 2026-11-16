@@ -58,7 +58,7 @@ public static class DoacaoEndpoints
                 return Results.Created($"/api/reservas/{r.Id}", r);
             })
             .RequireAuthorization("Receptor")
-            .AddEndpointFilter<IdempotencyFilter>()
+            .RequireIdempotencyKey()
             .WithSummary("Reserva a doação (idempotente via header Idempotency-Key)")
             .Produces<ReservaResponse>(201).ProducesProblem(409).ProducesProblem(422);
 

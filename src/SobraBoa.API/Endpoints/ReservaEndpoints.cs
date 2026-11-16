@@ -17,7 +17,7 @@ public static class ReservaEndpoints
 
         g.MapPost("/{id:int}/receber", async (int id, ReservaService svc, HttpContext http, CancellationToken ct)
                 => Results.Ok(await svc.ReceberAsync(http.User.GetUserId(), id, ct)))
-            .RequireAuthorization("Receptor").AddEndpointFilter<IdempotencyFilter>()
+            .RequireAuthorization("Receptor").RequireIdempotencyKey()
             .WithSummary("Confirma o recebimento e emite o comprovante (idempotente)")
             .Produces<ComprovanteResponse>(200);
 

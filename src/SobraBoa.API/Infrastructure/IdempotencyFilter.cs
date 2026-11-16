@@ -62,3 +62,11 @@ public class IdempotencyFilter(IIdempotencyStore store, TimeProvider clock) : IE
         return resultado;
     }
 }
+
+public static class IdempotencyExtensions
+{
+    public static RouteHandlerBuilder RequireIdempotencyKey(this RouteHandlerBuilder builder)
+        => builder.AddEndpointFilter<IdempotencyFilter>()
+            .WithMetadata(new IdempotentMarker())
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+}

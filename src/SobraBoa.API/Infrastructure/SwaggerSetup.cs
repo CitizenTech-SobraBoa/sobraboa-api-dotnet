@@ -35,17 +35,23 @@ public static class SwaggerSetup
 // Mostra o header Idempotency-Key nos endpoints que usam IdempotencyFilter
 public class IdempotencyHeaderFilter : IOperationFilter
 {
-    public void Apply(OpenApiOperation op, OperationFilterContext ctx)
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        var usa = ctx.ApiDescription.ActionDescriptor.EndpointMetadata.OfType<IdempotencyFilter>().Any()
-                  || ctx.ApiDescription.ActionDescriptor.EndpointMetadata.OfType<IdempotentMarker>().Any();
+        var path = context.ApiDescription.RelativePath ?? "";
+        var metodo = context.ApiDescription.HttpMethod;
+
+        // rotas que exigem o header: POST /api/doacoes/{id}/reservas e POST /api/reservas/{id}/receber
+        var usa = metodo == "POST" &&
+                  ((path.StartsWith("api/doacoes") && path.EndsWith("/reservas")) || path.EndsWith("/receber"));
         if (!usa) return;
-        op.Parameters ??= [];
-        op.Parameters.Add(new OpenApiParameter
+
+        operation.Parameters ??= [];
+        operation.Parameters.Add(new OpenApiParameter
         {
-            Name = "Idempotency-Key", In = ParameterLocation.Header, Required = true,
-            Description =
-                "UUID gerado pelo cliente. Repetir a mesma chave devolve a resposta original sem executar de novo.",
+            Name = "Idempotency-Key",
+            In = ParameterLocation.Header,
+            Required = true,
+            Description = "Valor único gerado pelo cliente. Repetir a mesma chave devolve a resposta original sem executar de novo.",
             Schema = new OpenApiSchema { Type = JsonSchemaType.String }
         });
     }
