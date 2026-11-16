@@ -26,6 +26,7 @@ public class SobraBoaContext(DbContextOptions<SobraBoaContext> options) : DbCont
             e.Property(x => x.NomeOrganizacao).HasMaxLength(150);
             e.Property(x => x.Papel).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Aprovacao).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.PossuiRefrigeracao).HasConversion<int>().HasColumnType("NUMBER(1)");
         });
 
         b.Entity<Doacao>(e =>
@@ -33,6 +34,7 @@ public class SobraBoaContext(DbContextOptions<SobraBoaContext> options) : DbCont
             e.ToTable("SB_DOACOES");
             e.Property(x => x.Titulo).HasMaxLength(150).IsRequired();
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.RequerRefrigeracao).HasConversion<int>().HasColumnType("NUMBER(1)");
             e.HasMany(x => x.Itens).WithOne().HasForeignKey(i => i.DoacaoId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Usuario>().WithMany().HasForeignKey(x => x.DoadorId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.Status, x.JanelaFim });
