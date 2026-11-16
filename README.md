@@ -530,7 +530,7 @@ public class IntegrationTestsCollection : ICollectionFixture<CustomWebApplicatio
 
 | Nome | RM |
 |---|---|
-| NOME COMPLETO 1 | RM000000 |
-| NOME COMPLETO 2 | RM000000 |
-| NOME COMPLETO 3 | RM000000 |
-| NOME COMPLETO 4 | RM000000 |
+| Felipe Kirschner Modesto | RM561810 |
+| João Victor Luiz Oliveira Resende | RM565139 |
+| Pedro Vaz Ferreira | RM566551 |
+| Vitor Dias dos Santos | RM565422 |
