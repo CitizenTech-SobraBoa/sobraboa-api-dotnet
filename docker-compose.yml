@@ -24,4 +24,5 @@ services:
       Admin__Email: admin@sobraboa.com
       Admin__Senha: ${ADMIN_SENHA}
       ASPNETCORE_ENVIRONMENT: Development
+      Seed__DadosDemo: "true"
     ports: ["5080:8080"]
