@@ -10,16 +10,18 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log, IHostEn
     {
         var (status, title) = ex switch
         {
+            BadHttpRequestException b => (b.StatusCode, "Requisição inválida"),
             AuthenticationFailedException => (401, "Não autenticado"),
-            ForbiddenException            => (403, "Acesso negado"),
-            NotFoundException             => (404, "Não encontrado"),
-            ConflictException             => (409, "Conflito"),
-            DomainException               => (422, "Regra de negócio violada"),
-            ArgumentException             => (400, "Requisição inválida"),
-            _                             => (500, "Erro interno")
+            ForbiddenException => (403, "Acesso negado"),
+            NotFoundException => (404, "Não encontrado"),
+            ConflictException => (409, "Conflito"),
+            DomainException => (422, "Regra de negócio violada"),
+            ArgumentException => (400, "Requisição inválida"),
+            _ => (500, "Erro interno")
         };
 
-        if (status == 500) log.LogError(ex, "Erro não tratado"); else log.LogWarning("{Tipo}: {Msg}", ex.GetType().Name, ex.Message);
+        if (status >= 500) log.LogError(ex, "Erro não tratado");
+        else log.LogWarning("{Tipo}: {Msg}", ex.GetType().Name, ex.Message);
 
         var problem = new ProblemDetails
         {
