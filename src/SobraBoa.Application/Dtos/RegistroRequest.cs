@@ -10,7 +10,8 @@ public record RegistroRequest(
     string Senha,
     [Required] Papel Papel, // Doador ou Receptor
     [Required, StringLength(150)] string NomeOrganizacao,
-    string? Cnpj,
+    [Cnpj] string? Cnpj,
+    [RegularExpression(@"^\d{5}-?\d{3}$", ErrorMessage = "CEP inválido (use 01310-100 ou 01310100)")]
     string? Cep,
     [Range(-90, 90)] double Latitude,
     [Range(-180, 180)] double Longitude,

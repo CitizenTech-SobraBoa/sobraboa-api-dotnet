@@ -10,4 +10,12 @@ public record DoacaoRequest(
     bool RequerRefrigeracao,
     string? InstrucoesRetirada,
     [Required, MinLength(1, ErrorMessage = "Informe ao menos um item")]
-    List<ItemRequest> Itens);
+    List<ItemRequest> Itens) : IValidatableObject
+{
+    public IEnumerable<ValidationResult> Validate(ValidationContext context)
+    {
+        if (JanelaFim <= JanelaInicio)
+            yield return new ValidationResult(
+                "A janela de retirada deve terminar depois de começar.", [nameof(JanelaFim)]);
+    }
+}
