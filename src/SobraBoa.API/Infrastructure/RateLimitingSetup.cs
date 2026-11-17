@@ -18,9 +18,15 @@ public static class RateLimitingSetup
             // limite global: por usuário autenticado; se anônimo, por IP
             o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
             {
-                var particao = http.User.Identity?.IsAuthenticated == true
-                    ? $"user:{http.User.GetUserId()}"
+                // health checks (monitoramento / Docker) não entram no limite
+                if (http.Request.Path.StartsWithSegments("/health"))
+                    return RateLimitPartition.GetNoLimiter("health");
+
+                var sub = http.User.FindFirst("sub")?.Value;
+                var particao = sub is not null
+                    ? $"user:{sub}"
                     : $"ip:{http.Connection.RemoteIpAddress}";
+
                 return RateLimitPartition.GetFixedWindowLimiter(particao, _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = g.GetValue("PermitLimit", 100),

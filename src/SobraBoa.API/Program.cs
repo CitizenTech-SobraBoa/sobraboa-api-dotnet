@@ -7,8 +7,13 @@ using SobraBoa.API.Infrastructure;
 using SobraBoa.Application;
 using SobraBoa.Infrastructure;
 using System.Text.Json.Serialization;
+using SobraBoa.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---- Falha rápido se os segredos forem os de exemplo ----
+SecretsGuard.Validar(builder.Configuration, builder.Environment);
+
 
 // ---- Logging estruturado ----
 builder.Host.UseSerilog((ctx, cfg) => cfg
@@ -55,8 +60,16 @@ builder.Services.AddRateLimitingSetup(builder.Configuration);
 builder.Services.AddHealthChecksSetup(builder.Configuration);
 builder.Services.AddSwaggerSetup();
 
+builder.Services.AddHttpClient<ICepService, ViaCepService>(c =>
+{
+    c.BaseAddress = new Uri("https://viacep.com.br/");
+    c.Timeout = TimeSpan.FromSeconds(3);
+});
+
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+builder.Services.AddHostedService<ExpiracaoJob>();
 
 var app = builder.Build();
 
@@ -70,9 +83,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRateLimiter(); // antes da autenticação: barra abuso cedo
-app.UseAuthentication(); // 1º quem é você
-app.UseAuthorization(); // 2º o que pode fazer
+app.UseAuthentication(); 
+app.UseRateLimiter();    
+app.UseAuthorization();  
 
 app.MapAuth();
 app.MapDoacoes();
