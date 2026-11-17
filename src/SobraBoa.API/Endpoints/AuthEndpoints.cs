@@ -7,7 +7,10 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/auth").WithTags("Autenticação").RequireRateLimiting("auth");
+        var g = app.MapGroup("/api/auth")
+            .WithTags("Autenticação")
+            .RequireRateLimiting("auth")
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
         g.MapPost("/registro", async (RegistroRequest req, AuthService svc, CancellationToken ct) =>
             {
