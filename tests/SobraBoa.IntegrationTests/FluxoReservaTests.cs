@@ -98,7 +98,7 @@ public class FluxoReservaTests(CustomWebApplicationFactory f)
     /// <summary>
     /// Registra um usuário pela API (nasce PENDENTE), aprova como Admin e devolve (id, cliente autenticado).
     /// </summary>
-    private async Task<(int Id, HttpClient Client)> RegistrarEAprovarAsync(string papel)
+    private async Task<(int Id, HttpClient Client)> RegistrarEAprovarAsync(string papel, bool refrigeracao = true)
     {
         var anonimo = f.CreateClient();
 
@@ -111,7 +111,7 @@ public class FluxoReservaTests(CustomWebApplicationFactory f)
             nomeOrganizacao = $"Org {papel}",
             latitude = -23.55,
             longitude = -46.63,
-            possuiRefrigeracao = true,
+            possuiRefrigeracao = refrigeracao,
             aceitouTermos = true
         });
         Assert.Equal(HttpStatusCode.Created, registro.StatusCode);
@@ -129,7 +129,7 @@ public class FluxoReservaTests(CustomWebApplicationFactory f)
     /// <summary>
     /// Doador cria uma doação (janela aberta agora) e publica. Devolve o id.
     /// </summary>
-    private static async Task<int> CriarDoacaoPublicadaAsync(HttpClient doador)
+    private static async Task<int> CriarDoacaoPublicadaAsync(HttpClient doador, bool refrigeracao = false)
     {
         var agora = DateTime.UtcNow;
         var criar = await doador.PostAsJsonAsync("/api/doacoes", new
@@ -138,7 +138,7 @@ public class FluxoReservaTests(CustomWebApplicationFactory f)
             descricao = "Sobra do expediente",
             janelaInicio = agora.AddHours(-1),
             janelaFim = agora.AddHours(4),
-            requerRefrigeracao = false,
+            requerRefrigeracao = refrigeracao,
             instrucoesRetirada = "Retirar no balcão",
             itens = new[]
             {
@@ -155,6 +155,114 @@ public class FluxoReservaTests(CustomWebApplicationFactory f)
         var publicar = await doador.PatchAsync($"/api/doacoes/{id}/publicar", null);
         Assert.Equal(HttpStatusCode.OK, publicar.StatusCode);
         return id;
+    }
+
+    [Fact]
+    public async Task Reservar_DoacaoRefrigeradaParaReceptorSemRefrigeracao_Retorna422()
+    {
+        var (_, doador) = await RegistrarEAprovarAsync("Doador");
+        var (_, receptor) = await RegistrarEAprovarAsync("Receptor", refrigeracao: false);
+        var doacaoId = await CriarDoacaoPublicadaAsync(doador, refrigeracao: true);
+
+        var resp = await Reservar(receptor, doacaoId, Guid.NewGuid().ToString());
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Cancelar_DoacaoDeOutroDoador_Retorna403()
+    {
+        var (_, dono) = await RegistrarEAprovarAsync("Doador");
+        var (_, intruso) = await RegistrarEAprovarAsync("Doador");
+        var doacaoId = await CriarDoacaoPublicadaAsync(dono);
+
+        var resp = await intruso.DeleteAsync($"/api/doacoes/{doacaoId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Obter_RascunhoDeOutroUsuario_Retorna404()
+    {
+        var (_, dono) = await RegistrarEAprovarAsync("Doador");
+        var (_, receptor) = await RegistrarEAprovarAsync("Receptor");
+
+        var agora = DateTime.UtcNow;
+        var criar = await dono.PostAsJsonAsync("/api/doacoes", new
+        {
+            titulo = "Rascunho secreto",
+            janelaInicio = agora.AddHours(-1),
+            janelaFim = agora.AddHours(4),
+            requerRefrigeracao = false,
+            itens = new[] { new { descricao = "Pão", quantidade = 1m, unidade = "UN", pesoEstimadoKg = 1m } }
+        });
+        var id = (await criar.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        Assert.Equal(HttpStatusCode.OK, (await dono.GetAsync($"/api/doacoes/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await receptor.GetAsync($"/api/doacoes/{id}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelarDoacaoReservada_EncerraAReservaDoReceptor()
+    {
+        var (_, doador) = await RegistrarEAprovarAsync("Doador");
+        var (_, receptor) = await RegistrarEAprovarAsync("Receptor");
+        var doacaoId = await CriarDoacaoPublicadaAsync(doador);
+        var reserva = await Reservar(receptor, doacaoId, Guid.NewGuid().ToString());
+        var reservaId = (await reserva.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+
+        var cancelar = await doador.DeleteAsync($"/api/doacoes/{doacaoId}");
+        Assert.Equal(HttpStatusCode.NoContent, cancelar.StatusCode);
+
+        // a reserva já foi encerrada: o receptor não consegue cancelar de novo (só reservas ativas)
+        var denovo = await receptor.PostAsJsonAsync($"/api/reservas/{reservaId}/cancelar", new { motivo = "x" });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, denovo.StatusCode);
+    }
+
+    [Fact]
+    public async Task Receber_MesmaIdempotencyKey_DevolveOMesmoComprovante()
+    {
+        var (_, doador) = await RegistrarEAprovarAsync("Doador");
+        var (_, receptor) = await RegistrarEAprovarAsync("Receptor");
+        var doacaoId = await CriarDoacaoPublicadaAsync(doador);
+        var reserva = await Reservar(receptor, doacaoId, Guid.NewGuid().ToString());
+        var corpo = await reserva.Content.ReadFromJsonAsync<JsonElement>();
+        var reservaId = corpo.GetProperty("id").GetInt32();
+        var codigo = corpo.GetProperty("codigoRetirada").GetString();
+        await doador.PostAsJsonAsync($"/api/reservas/{reservaId}/retirada", new { codigo });
+
+        var key = Guid.NewGuid().ToString();
+
+        HttpRequestMessage Receber()
+        {
+            var m = new HttpRequestMessage(HttpMethod.Post, $"/api/reservas/{reservaId}/receber");
+            m.Headers.Add("Idempotency-Key", key);
+            return m;
+        }
+
+        var r1 = await receptor.SendAsync(Receber());
+        var r2 = await receptor.SendAsync(Receber()); // sem a idempotência seria 422 ("retirada ainda não confirmada")
+
+        Assert.Equal(HttpStatusCode.OK, r1.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, r2.StatusCode);
+        Assert.True(r2.Headers.Contains("Idempotent-Replayed"));
+        Assert.Equal(await r1.Content.ReadAsStringAsync(), await r2.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task MinhasReservas_ListaApenasAsDoReceptorAutenticado()
+    {
+        var (_, doador) = await RegistrarEAprovarAsync("Doador");
+        var (_, receptorA) = await RegistrarEAprovarAsync("Receptor");
+        var (_, receptorB) = await RegistrarEAprovarAsync("Receptor");
+        var doacaoId = await CriarDoacaoPublicadaAsync(doador);
+        await Reservar(receptorA, doacaoId, Guid.NewGuid().ToString());
+
+        var a = await receptorA.GetFromJsonAsync<JsonElement>("/api/reservas/minhas");
+        var b = await receptorB.GetFromJsonAsync<JsonElement>("/api/reservas/minhas");
+
+        Assert.Equal(1, a.GetArrayLength());
+        Assert.Equal(0, b.GetArrayLength());
     }
 }
 

@@ -28,6 +28,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             ["RateLimiting:Auth:PermitLimit"] = "100000",
             ["HealthChecks:ExternalService:Url"] = "http://localhost:1/inexistente",
             ["HealthChecks:ExternalService:TimeoutSeconds"] = "1",
+            ["Jobs:Expiracao:Habilitado"] = "false",
             ["Admin:Email"] = "admin@sobraboa.com", ["Admin:Senha"] = "Admin@12345"
         }.Concat(Extra).ToDictionary(k => k.Key, k => k.Value)));
 
