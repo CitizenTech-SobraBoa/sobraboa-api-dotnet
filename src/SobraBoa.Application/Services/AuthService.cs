@@ -5,11 +5,18 @@ using SobraBoa.Domain.Exceptions;
 
 namespace SobraBoa.Application.Services;
 
-public class AuthService(IUsuarioRepository usuarios, IPasswordHasher hasher, IJwtTokenGenerator jwt, IUnitOfWork uow)
+public class AuthService(
+    IUsuarioRepository usuarios,
+    IPasswordHasher hasher,
+    IJwtTokenGenerator jwt,
+    IUnitOfWork uow,
+    ICepService cep)
 {
     public async Task<int> RegistrarAsync(RegistroRequest r, CancellationToken ct = default)
     {
         if (await usuarios.ExisteEmailAsync(r.Email, ct)) throw new ConflictException("E-mail já cadastrado.");
+        if (!string.IsNullOrWhiteSpace(r.Cep) && await cep.CepExisteAsync(r.Cep, ct) == false)
+            throw new DomainException("CEP não encontrado.");
         var u = new Usuario(r.Nome, r.Email, hasher.Hash(r.Senha), r.Papel, r.NomeOrganizacao,
             r.Latitude, r.Longitude, r.PossuiRefrigeracao, r.Cnpj, r.Cep);
         await usuarios.AdicionarAsync(u, ct);
