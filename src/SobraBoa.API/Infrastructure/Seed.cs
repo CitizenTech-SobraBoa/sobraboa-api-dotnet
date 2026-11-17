@@ -17,6 +17,12 @@ public static class Seed
         var email = cfg["Admin:Email"];
         var senha = cfg["Admin:Senha"];
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(senha)) return;
+        if (SecretsGuard.EhSenhaPlaceholder(senha))
+        {
+            app.Logger.LogWarning("Admin:Senha é o placeholder do repositório. Admin NÃO foi criado.");
+            return;
+        }
+
         if (await db.Usuarios.CountAsync(u => u.Email == email) > 0) return;
 
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
