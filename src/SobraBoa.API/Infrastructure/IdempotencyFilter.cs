@@ -28,38 +28,64 @@ public class IdempotencyFilter(IIdempotencyStore store, TimeProvider clock) : IE
 
         var escopo = $"{http.User.GetUserId()}:{http.Request.Method}:{http.Request.Path}";
 
-        // 2) já processada? devolve a resposta original
+        // 2) já existe registro? (respondido ou em processamento)
         var existente = await store.ObterAsync(chave, escopo, ct);
-        if (existente is not null)
+        if (existente is not null) return Responder(http, existente);
+
+        // 3) reserva a chave ANTES de executar: se perder a corrida, devolve o que o vencedor gravou
+        var agora = clock.GetUtcNow().UtcDateTime;
+        if (!await store.TentarReservarAsync(chave, escopo, agora, ct))
         {
-            http.Response.Headers["Idempotent-Replayed"] = "true";
-            return existente.CorpoResposta is null
-                ? Results.StatusCode(existente.StatusCode)
-                : Results.Content(existente.CorpoResposta, "application/json", statusCode: existente.StatusCode);
+            existente = await store.ObterAsync(chave, escopo, ct);
+            return existente is null ? EmProcessamento(http) : Responder(http, existente);
         }
 
-        // 3) executa de verdade
-        var resultado = await next(ctx);
+        // 4) executa de verdade; se falhar, libera a chave para o cliente tentar de novo
+        object? resultado;
+        try
+        {
+            resultado = await next(ctx);
+        }
+        catch
+        {
+            await store.LiberarAsync(chave, escopo, CancellationToken.None);
+            throw;
+        }
 
-        // 4) grava a resposta (somente respostas "definitivas": < 500)
+        // 5) grava a resposta definitiva (< 500); erro de servidor libera a chave
         if (resultado is IStatusCodeHttpResult sc && (sc.StatusCode ?? 200) < 500)
         {
             var corpo = resultado is IValueHttpResult v && v.Value is not null
                 ? JsonSerializer.Serialize(v.Value, Json)
                 : null;
-            var gravou = await store.SalvarAsync(new IdempotencyRecord
-            {
-                Chave = chave, Escopo = escopo, StatusCode = sc.StatusCode ?? 200,
-                CorpoResposta = corpo, CriadoEm = clock.GetUtcNow().UtcDateTime
-            }, ct);
-
-            // 5) corrida: duas requisições com a mesma chave ao mesmo tempo
-            if (!gravou)
-                return Results.Problem(title: "Requisição em processamento",
-                    detail: "Outra requisição com a mesma chave está em andamento.", statusCode: 409);
+            await store.CompletarAsync(chave, escopo, sc.StatusCode ?? 200, corpo, ct);
+        }
+        else
+        {
+            await store.LiberarAsync(chave, escopo, CancellationToken.None);
         }
 
         return resultado;
+    }
+
+    private const int EmProcessamentoStatus = 0;
+
+    private static IResult Responder(HttpContext http, IdempotencyRecord r)
+    {
+        if (r.StatusCode == EmProcessamentoStatus) return EmProcessamento(http);
+
+        http.Response.Headers["Idempotent-Replayed"] = "true";
+        return r.CorpoResposta is null
+            ? Results.StatusCode(r.StatusCode)
+            : Results.Content(r.CorpoResposta, "application/json", statusCode: r.StatusCode);
+    }
+
+    private static IResult EmProcessamento(HttpContext http)
+    {
+        http.Response.Headers.RetryAfter = "1";
+        return Results.Problem(title: "Requisição em processamento",
+            detail: "Outra requisição com a mesma chave está em andamento. Tente novamente em instantes.",
+            statusCode: 409);
     }
 }
 
