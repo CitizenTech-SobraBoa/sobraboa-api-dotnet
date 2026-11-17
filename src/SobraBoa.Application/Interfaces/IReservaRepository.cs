@@ -10,4 +10,6 @@ public interface IReservaRepository
     Task AdicionarComprovanteAsync(Comprovante c, CancellationToken ct = default);
     Task<Comprovante?> ObterComprovantePorReservaAsync(int reservaId, CancellationToken ct = default);
     Task<decimal> SomarKgDoadosAsync(CancellationToken ct = default);
+    Task<Reserva?> ObterAtivaPorDoacaoAsync(int doacaoId, CancellationToken ct = default);
+    Task<IReadOnlyList<Reserva>> ListarAtivasVencidasAsync(DateTime agoraUtc, int limite, CancellationToken ct = default);
 }

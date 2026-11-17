@@ -10,4 +10,5 @@ public interface IDoacaoRepository
     Task AdicionarAsync(Doacao d, CancellationToken ct = default);
     Task AdicionarHistoricoAsync(HistoricoStatus h, CancellationToken ct = default);
     Task<IReadOnlyDictionary<string, int>> ContarPorStatusAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<Doacao>> ListarDisponiveisVencidasAsync(DateTime agoraUtc, int limite, CancellationToken ct = default);
 }

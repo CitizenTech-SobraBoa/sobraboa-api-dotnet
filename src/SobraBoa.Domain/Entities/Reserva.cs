@@ -39,9 +39,16 @@ public class Reserva
         });
     }
 
-    public void ConfirmarRetirada(string codigo)
+    public void Expirar()
+    {
+        if (Status != StatusReserva.Ativa) throw new DomainException("Só reservas ativas podem expirar.");
+        Status = StatusReserva.Expirada;
+    }
+    
+    public void ConfirmarRetirada(string codigo, DateTime? agoraUtc = null)
     {
         if (Status != StatusReserva.Ativa) throw new DomainException("Reserva não está ativa.");
+        if (agoraUtc is not null && agoraUtc > ExpiraEm) throw new DomainException("Reserva expirada.");
         if (!string.Equals(codigo?.Trim(), CodigoRetirada, StringComparison.OrdinalIgnoreCase))
             throw new DomainException("Código de retirada inválido.");
         Status = StatusReserva.Retirada;

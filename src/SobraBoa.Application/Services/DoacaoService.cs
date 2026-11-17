@@ -6,7 +6,12 @@ using SobraBoa.Domain.Exceptions;
 
 namespace SobraBoa.Application.Services;
 
-public class DoacaoService(IDoacaoRepository doacoes, IUsuarioRepository usuarios, IUnitOfWork uow, TimeProvider clock)
+public class DoacaoService(
+    IDoacaoRepository doacoes,
+    IReservaRepository reservas,
+    IUsuarioRepository usuarios,
+    IUnitOfWork uow,
+    TimeProvider clock)
 {
     public async Task<DoacaoResponse> CriarAsync(int doadorId, DoacaoRequest r, CancellationToken ct = default)
     {
@@ -27,6 +32,7 @@ public class DoacaoService(IDoacaoRepository doacoes, IUsuarioRepository usuario
 
     public async Task<DoacaoResponse> PublicarAsync(int doadorId, int doacaoId, CancellationToken ct = default)
     {
+        await ObterDoadorAprovadoAsync(doadorId, ct);
         var d = await ObterDoDoadorAsync(doadorId, doacaoId, ct);
         var anterior = d.Status;
         d.Publicar();
@@ -41,7 +47,11 @@ public class DoacaoService(IDoacaoRepository doacoes, IUsuarioRepository usuario
     {
         var d = await ObterDoDoadorAsync(doadorId, doacaoId, ct);
         var anterior = d.Status;
-        d.Cancelar();
+        d.Cancelar(); // lança DomainException se o estado não permitir; só depois mexemos na reserva
+
+        // reserva em andamento (se houver) é encerrada junto, liberando o índice único e o código de retirada
+        var reservaAtiva = await reservas.ObterAtivaPorDoacaoAsync(doacaoId, ct);
+        reservaAtiva?.Cancelar("Doação cancelada pelo doador");
         await doacoes.AdicionarHistoricoAsync(
             new HistoricoStatus(d.Id, anterior, d.Status, doadorId, "Cancelada pelo doador",
                 clock.GetUtcNow().UtcDateTime), ct);
@@ -51,9 +61,10 @@ public class DoacaoService(IDoacaoRepository doacoes, IUsuarioRepository usuario
     public async Task<DoacaoResponse> AtualizarAsync(int doadorId, int doacaoId, DoacaoRequest r,
         CancellationToken ct = default)
     {
+        await ObterDoadorAprovadoAsync(doadorId, ct);
         var d = await ObterDoDoadorAsync(doadorId, doacaoId, ct);
         d.AtualizarDados(r.Titulo, r.Descricao, r.JanelaInicio.ToUniversalTime(), r.JanelaFim.ToUniversalTime(),
-            r.RequerRefrigeracao, r.InstrucoesRetirada);
+            r.RequerRefrigeracao, r.InstrucoesRetirada, clock.GetUtcNow().UtcDateTime);
         await uow.SaveChangesAsync(ct);
         return Mapear(d);
     }
@@ -66,8 +77,17 @@ public class DoacaoService(IDoacaoRepository doacoes, IUsuarioRepository usuario
         return new(itens.Select(i => Mapear(i)).ToList(), page, pageSize, total);
     }
 
-    public async Task<DoacaoResponse> ObterAsync(int id, CancellationToken ct = default)
-        => Mapear(await doacoes.ObterPorIdAsync(id, ct) ?? throw new NotFoundException("Doação não encontrada."));
+    public async Task<DoacaoResponse> ObterAsync(int id, int usuarioId, bool ehAdmin, CancellationToken ct = default)
+    {
+        var d = await doacoes.ObterPorIdAsync(id, ct) ?? throw new NotFoundException("Doação não encontrada.");
+
+        // rascunho e cancelada só interessam ao dono (ou admin). 404 em vez de 403 para não revelar que existe.
+        var restrita = d.Status is StatusDoacao.Rascunho or StatusDoacao.Cancelada;
+        if (restrita && !ehAdmin && d.DoadorId != usuarioId)
+            throw new NotFoundException("Doação não encontrada.");
+
+        return Mapear(d);
+    }
 
     public async Task<PagedResult<DoacaoResponse>> ProximasAsync(int receptorId, double lat, double lng, double raioKm,
         int page, int pageSize, CancellationToken ct = default)

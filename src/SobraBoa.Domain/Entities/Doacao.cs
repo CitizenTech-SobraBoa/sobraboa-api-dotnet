@@ -47,7 +47,15 @@ public class Doacao
         Longitude = lng;
         Itens = lista;
     }
-
+    
+    
+    public void Expirar(DateTime agoraUtc)
+    {
+        if (Status != StatusDoacao.Disponivel) throw new DomainException("Só doações disponíveis podem expirar.");
+        if (agoraUtc < JanelaFim) throw new DomainException("A janela de retirada ainda está aberta.");
+        Status = StatusDoacao.Expirada;
+    }
+    
     public void Publicar()
     {
         if (Status != StatusDoacao.Rascunho) throw new DomainException("Apenas rascunhos podem ser publicados.");
@@ -87,12 +95,15 @@ public class Doacao
         Status = StatusDoacao.Cancelada;
     }
 
-    public void AtualizarDados(string titulo, string? descricao, DateTime ini, DateTime fim, bool refrig, string? instr)
+    public void AtualizarDados(string titulo, string? descricao, DateTime ini, DateTime fim, bool refrig,
+        string? instr, DateTime agoraUtc)
     {
         if (Status is not (StatusDoacao.Rascunho or StatusDoacao.Disponivel))
             throw new DomainException("Só é possível editar rascunho ou doação disponível.");
+        if (string.IsNullOrWhiteSpace(titulo)) throw new DomainException("Título é obrigatório.");
         if (fim <= ini) throw new DomainException("A janela de retirada é inválida.");
-        Titulo = titulo;
+        if (fim <= agoraUtc) throw new DomainException("A janela de retirada deve terminar no futuro.");
+        Titulo = titulo.Trim();
         Descricao = descricao;
         JanelaInicio = ini;
         JanelaFim = fim;

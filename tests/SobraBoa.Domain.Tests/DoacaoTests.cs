@@ -75,4 +75,45 @@ public class DoacaoTests
     [Fact]
     public void PesoTotalKg_SomaOsItens()
         => Assert.Equal(1.5m, Nova().PesoTotalKg);
+    
+    [Fact]
+    public void Cancelar_DoacaoRetirada_LancaDomainException()
+    {
+        var d = Nova();
+        d.Reservar(Agora);
+        d.MarcarRetirada();
+        Assert.Throws<DomainException>(() => d.Cancelar());
+    }
+
+    [Fact]
+    public void Expirar_JanelaEncerrada_VaiParaExpirada()
+    {
+        var d = Nova();
+        d.Expirar(Agora.AddHours(10));
+        Assert.Equal(StatusDoacao.Expirada, d.Status);
+    }
+
+    [Fact]
+    public void Expirar_JanelaAindaAberta_LancaDomainException()
+    {
+        var d = Nova();
+        Assert.Throws<DomainException>(() => d.Expirar(Agora));
+    }
+
+    [Fact]
+    public void AtualizarDados_JanelaNoPassado_LancaDomainException()
+    {
+        var d = Nova(publicar: false);
+        Assert.Throws<DomainException>(() =>
+            d.AtualizarDados("novo", null, Agora.AddHours(-5), Agora.AddHours(-1), false, null, Agora));
+    }
+
+    [Fact]
+    public void LiberarReserva_JanelaEncerrada_VaiParaExpirada()
+    {
+        var d = Nova();
+        d.Reservar(Agora);
+        d.LiberarReserva(Agora.AddHours(10));
+        Assert.Equal(StatusDoacao.Expirada, d.Status);
+    }
 }

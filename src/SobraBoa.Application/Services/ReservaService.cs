@@ -47,7 +47,7 @@ public class ReservaService(
             throw new ForbiddenException("Apenas o doador desta doação pode confirmar a retirada.");
 
         var agora = clock.GetUtcNow().UtcDateTime;
-        reserva.ConfirmarRetirada(codigo);
+        reserva.ConfirmarRetirada(codigo, agora);
         var anterior = doacao.Status;
         doacao.MarcarRetirada();
         await doacoes.AdicionarHistoricoAsync(
@@ -56,6 +56,15 @@ public class ReservaService(
         return new(reserva.Id, doacao.Id, reserva.Status.ToString(), null, reserva.ExpiraEm);
     }
 
+    public async Task<IReadOnlyList<ReservaResponse>> MinhasAsync(int receptorId, CancellationToken ct = default)
+    {
+        var lista = await reservas.ListarDoReceptorAsync(receptorId, ct);
+        return lista.Select(r => new ReservaResponse(
+            r.Id, r.DoacaoId, r.Status.ToString(),
+            r.Status == StatusReserva.Ativa ? r.CodigoRetirada : null, // código só enquanto está ativa
+            r.ExpiraEm)).ToList();
+    }
+    
     public async Task<ComprovanteResponse> ReceberAsync(int receptorId, int reservaId, CancellationToken ct = default)
     {
         var (reserva, doacao) = await CarregarAsync(reservaId, ct);

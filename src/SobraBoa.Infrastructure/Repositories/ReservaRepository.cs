@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SobraBoa.Application.Interfaces;
 using SobraBoa.Domain.Entities;
+using SobraBoa.Domain.Enums;
 using SobraBoa.Infrastructure.Persistence;
 
 namespace SobraBoa.Infrastructure.Repositories;
@@ -29,4 +30,16 @@ public class ReservaRepository(SobraBoaContext db) : IReservaRepository
     // Cast para decimal? faz o SUM devolver null (e não exceção) quando não há comprovantes.
     public async Task<decimal> SomarKgDoadosAsync(CancellationToken ct = default)
         => await db.Comprovantes.SumAsync(c => (decimal?)c.PesoTotalKg, ct) ?? 0m;
+    
+    // Com tracking: o serviço vai chamar Cancelar() na reserva e salvar.
+    public Task<Reserva?> ObterAtivaPorDoacaoAsync(int doacaoId, CancellationToken ct = default)
+        => db.Reservas.FirstOrDefaultAsync(r => r.DoacaoId == doacaoId && r.Status == StatusReserva.Ativa, ct);
+    
+    // Com tracking: o job chama Expirar() e salva.
+    public async Task<IReadOnlyList<Reserva>> ListarAtivasVencidasAsync(DateTime agoraUtc, int limite,
+        CancellationToken ct = default)
+        => await db.Reservas
+            .Where(r => r.Status == StatusReserva.Ativa && r.ExpiraEm <= agoraUtc)
+            .OrderBy(r => r.ExpiraEm).Take(limite)
+            .ToListAsync(ct);
 }

@@ -37,4 +37,11 @@ public class DoacaoRepository(SobraBoaContext db) : IDoacaoRepository
     public async Task<IReadOnlyDictionary<string, int>> ContarPorStatusAsync(CancellationToken ct = default)
         => (await db.Doacoes.GroupBy(d => d.Status).Select(g => new { g.Key, N = g.Count() }).ToListAsync(ct))
             .ToDictionary(x => x.Key.ToString(), x => x.N);
+    
+    public async Task<IReadOnlyList<Doacao>> ListarDisponiveisVencidasAsync(DateTime agoraUtc, int limite,
+        CancellationToken ct = default)
+        => await db.Doacoes
+            .Where(d => d.Status == StatusDoacao.Disponivel && d.JanelaFim <= agoraUtc)
+            .OrderBy(d => d.JanelaFim).Take(limite)
+            .ToListAsync(ct);
 }
